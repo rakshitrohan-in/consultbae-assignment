@@ -1,0 +1,17 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+
+# Virtual environments
+venv/
+.venv/
+env/
+ENV/
+
+# Audio submission uploads (user-generated test/runtime files)
+audioapp/uploads/
+
+# Editor/OS cruft
+.DS_Store
+Thumbs.db

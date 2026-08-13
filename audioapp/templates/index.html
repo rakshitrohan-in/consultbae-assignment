@@ -1,0 +1,148 @@
+{% extends "base.html" %}
+{% block title %}Submit Audio{% endblock %}
+{% block content %}
+<div class="card">
+  <h1>Submit an audio sample</h1>
+  <p style="color:#6b7280; margin-top:-8px;">Record directly in your browser, or upload an existing file.</p>
+
+  <form id="submitForm" method="post" enctype="multipart/form-data" novalidate>
+    <div class="field">
+      <label for="name">Name</label>
+      <input type="text" id="name" name="name" required autocomplete="name">
+    </div>
+
+    <div class="field">
+      <label for="phone">Phone</label>
+      <input type="text" id="phone" name="phone" required autocomplete="tel" placeholder="e.g. 98765 43210">
+    </div>
+
+    <div class="field">
+      <label>Record audio</label>
+      <div class="record-row">
+        <button type="button" id="recordBtn">Record</button>
+        <span id="recordStatus" class="hint">No recording yet.</span>
+      </div>
+      <audio id="previewAudio" controls style="display:none; margin-top:10px; width:100%;"></audio>
+    </div>
+
+    <div class="field">
+      <label for="fileInput">...or upload a file</label>
+      <input type="file" id="fileInput" name="audio_file" accept=".mp3,.wav,.m4a,.webm,.ogg,audio/*">
+      <div class="hint">Accepted formats: mp3, wav, m4a, webm, ogg.</div>
+    </div>
+
+    <button type="submit" id="submitBtn" disabled>Submit</button>
+  </form>
+</div>
+
+<style>
+  .field { margin-bottom: 20px; }
+  label { display: block; font-weight: 600; margin-bottom: 6px; font-size: 0.9rem; }
+  input[type="text"], input[type="file"] {
+    width: 100%;
+    padding: 10px 12px;
+    border: 1px solid #dfe3e8;
+    border-radius: 8px;
+    font-size: 0.95rem;
+  }
+  input[type="text"]:focus { outline: none; border-color: #2563eb; }
+  .hint { color: #6b7280; font-size: 0.85rem; }
+  .record-row { display: flex; align-items: center; gap: 12px; }
+  #recordBtn {
+    background: #fff;
+    border: 1px solid #2563eb;
+    color: #2563eb;
+    padding: 9px 18px;
+    border-radius: 8px;
+    font-weight: 600;
+    cursor: pointer;
+  }
+  #recordBtn.recording {
+    background: #dc2626;
+    border-color: #dc2626;
+    color: #fff;
+  }
+  #submitBtn {
+    background: #2563eb;
+    color: #fff;
+    border: none;
+    padding: 11px 22px;
+    border-radius: 8px;
+    font-weight: 600;
+    font-size: 0.95rem;
+    cursor: pointer;
+  }
+  #submitBtn:disabled {
+    background: #9ca3af;
+    cursor: not-allowed;
+  }
+</style>
+
+<script>
+  const recordBtn = document.getElementById('recordBtn');
+  const fileInput = document.getElementById('fileInput');
+  const submitBtn = document.getElementById('submitBtn');
+  const recordStatus = document.getElementById('recordStatus');
+  const previewAudio = document.getElementById('previewAudio');
+
+  let mediaRecorder = null;
+  let audioChunks = [];
+
+  function updateSubmitState() {
+    submitBtn.disabled = !(fileInput.files && fileInput.files.length > 0);
+  }
+
+  fileInput.addEventListener('change', () => {
+    previewAudio.style.display = 'none';
+    updateSubmitState();
+  });
+
+  recordBtn.addEventListener('click', async () => {
+    if (mediaRecorder && mediaRecorder.state === 'recording') {
+      mediaRecorder.stop();
+      return;
+    }
+
+    if (!navigator.mediaDevices || !window.MediaRecorder) {
+      recordStatus.textContent = 'Recording is not supported in this browser.';
+      return;
+    }
+
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      audioChunks = [];
+      mediaRecorder = new MediaRecorder(stream);
+
+      mediaRecorder.ondataavailable = (e) => {
+        if (e.data.size > 0) audioChunks.push(e.data);
+      };
+
+      mediaRecorder.onstop = () => {
+        const blob = new Blob(audioChunks, { type: 'audio/webm' });
+        const file = new File([blob], `recording_${Date.now()}.webm`, { type: 'audio/webm' });
+
+        const dt = new DataTransfer();
+        dt.items.add(file);
+        fileInput.files = dt.files;
+
+        previewAudio.src = URL.createObjectURL(blob);
+        previewAudio.style.display = 'block';
+
+        recordBtn.textContent = 'Record';
+        recordBtn.classList.remove('recording');
+        recordStatus.textContent = 'Recording captured — ready to submit.';
+        updateSubmitState();
+
+        stream.getTracks().forEach((t) => t.stop());
+      };
+
+      mediaRecorder.start();
+      recordBtn.textContent = 'Stop Recording';
+      recordBtn.classList.add('recording');
+      recordStatus.textContent = 'Recording... click Stop when done.';
+    } catch (err) {
+      recordStatus.textContent = 'Microphone access denied or unavailable: ' + err.message;
+    }
+  });
+</script>
+{% endblock %}

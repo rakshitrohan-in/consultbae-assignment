@@ -1,0 +1,52 @@
+{% extends "base.html" %}
+{% block title %}Submissions{% endblock %}
+{% block content %}
+<div class="card" style="max-width:100%; overflow-x:auto;">
+  <h1>Submissions</h1>
+  {% if not rows %}
+    <p style="color:#6b7280;">No submissions yet.</p>
+  {% else %}
+  <table>
+    <thead>
+      <tr>
+        <th>Name</th>
+        <th>Phone</th>
+        <th>Audio</th>
+        <th>Duration (s)</th>
+        <th>Sample rate (kHz)</th>
+        <th>Bitrate (kbps)</th>
+        <th>Loudness (dB)</th>
+        <th>Noise est. (dB)</th>
+        <th>Submitted at</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for row in rows %}
+      <tr>
+        <td>{{ row.full_name or "—" }}</td>
+        <td>{{ row.phone or "—" }}</td>
+        <td>
+          <audio controls preload="none" style="width:220px;">
+            <source src="{{ url_for('uploaded_file', filename=row.filename) }}">
+          </audio>
+        </td>
+        <td>{{ row.duration_sec if row.duration_sec is not none else "—" }}</td>
+        <td>{{ row.sample_rate_khz if row.sample_rate_khz is not none else "—" }}</td>
+        <td>{{ row.bitrate_kbps if row.bitrate_kbps is not none else "—" }}</td>
+        <td>{{ row.loudness_db if row.loudness_db is not none else "—" }}</td>
+        <td>{{ row.noise_estimate if row.noise_estimate is not none else "—" }}</td>
+        <td>{{ row.submitted_at }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% endif %}
+</div>
+
+<style>
+  table { width: 100%; border-collapse: collapse; font-size: 0.88rem; }
+  th, td { text-align: left; padding: 10px 12px; border-bottom: 1px solid #eef0f3; white-space: nowrap; }
+  th { color: #6b7280; font-weight: 600; font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.03em; }
+  tbody tr:hover { background: #fafbfc; }
+</style>
+{% endblock %}

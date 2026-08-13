@@ -1,0 +1,509 @@
+{
+  "name": "Skill Category Tagger",
+  "nodes": [
+    {
+      "parameters": {
+        "formTitle": "Skill Category Tagger",
+        "formFields": {
+          "values": [
+            {
+              "fieldLabel": "Name",
+              "fieldName": "Name",
+              "requiredField": true
+            },
+            {
+              "fieldLabel": "Email",
+              "fieldType": "email",
+              "fieldName": "Email"
+            },
+            {
+              "fieldLabel": "Phone",
+              "fieldName": "Phone"
+            },
+            {
+              "fieldLabel": "City",
+              "fieldName": "City"
+            },
+            {
+              "fieldLabel": "Skills",
+              "fieldType": "textarea",
+              "fieldName": "Skills",
+              "placeholder": "e.g. Python, Excel, automation, client calls",
+              "requiredField": true
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "025da76a-5f55-4d10-b858-9f97fb08e34b",
+      "name": "Skill Category Tagger",
+      "type": "n8n-nodes-base.formTrigger",
+      "typeVersion": 2.6,
+      "position": [
+        0,
+        192
+      ],
+      "webhookId": "c303e5b7-6d75-4e92-87f9-f5cf4fc2c194"
+    },
+    {
+      "parameters": {
+        "modelId": {
+          "__rl": true,
+          "mode": "list",
+          "value": "gpt-5-mini",
+          "cachedResultName": "gpt-5-mini"
+        },
+        "responses": {
+          "values": [
+            {
+              "role": "system",
+              "content": "You are a strict skills classifier. Read the user's skills text and return EXACTLY ONE category label from this set, with no other words, punctuation, or explanation: automation-heavy, web dev, data, other. Rules: choose \"automation-heavy\" only if the skills clearly center on automation/workflow/scripting/RPA/integrations; choose \"web dev\" only for clear front-end/back-end web development skills; choose \"data\" only for clear data/analytics/data-science skills. If the skills text is empty, vague, ambiguous, or does not clearly match one of the first three categories, respond with \"other\". Never guess. Output only the label in lowercase."
+            },
+            {
+              "content": "={{ $json.Skills }}"
+            }
+          ]
+        },
+        "builtInTools": {},
+        "options": {}
+      },
+      "id": "952f9d5a-1a16-4781-9488-be3127110432",
+      "name": "Classify Skills",
+      "type": "@n8n/n8n-nodes-langchain.openAi",
+      "typeVersion": 2.3,
+      "position": [
+        224,
+        192
+      ],
+      "credentials": {
+        "openAiApi": {
+          "id": "D03iG9zinwrWVzix",
+          "name": "n8n free OpenAI API credits"
+        }
+      },
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "operation": "completion",
+        "completionTitle": "Something went wrong",
+        "completionMessage": "We could not classify your skills right now. Please try submitting the form again later.",
+        "options": {}
+      },
+      "id": "9d4cad7b-df35-4d87-8cda-8896cde59896",
+      "name": "Show Error",
+      "type": "n8n-nodes-base.form",
+      "typeVersion": 2.5,
+      "position": [
+        448,
+        288
+      ],
+      "webhookId": "9ffbca59-d555-46d7-9162-ec1a67d5375c"
+    },
+    {
+      "parameters": {
+        "jsCode": "const raw = ($json.output && $json.output[0] && $json.output[0].content && $json.output[0].content[0] && $json.output[0].content[0].text) || '';\nconst cat = String(raw).trim().toLowerCase();\nconst allowed = ['automation-heavy', 'web dev', 'data', 'other'];\nconst category = allowed.includes(cat) ? cat : 'other';\nconst trig = $('Skill Category Tagger').item.json;\nreturn [{\n  json: {\n    full_name: trig.Name,\n    email: trig.Email || '',\n    phone: trig.Phone || '',\n    city: trig.City || '',\n    skills: trig.Skills,\n    skill_category: category,\n    tagged_at: new Date().toISOString(),\n  },\n}];"
+      },
+      "id": "e6a3a0c4-1e28-4f56-b84c-bf0bce27e1df",
+      "name": "Build Record",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        448,
+        96
+      ]
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "1MIByLPOEx2_f1qh_vHx9oT0Qy48H9MUb4Kdwhd97PeI",
+          "mode": "list",
+          "cachedResultName": "persons",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1MIByLPOEx2_f1qh_vHx9oT0Qy48H9MUb4Kdwhd97PeI/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Sheet1",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1MIByLPOEx2_f1qh_vHx9oT0Qy48H9MUb4Kdwhd97PeI/edit#gid=0"
+        },
+        "options": {}
+      },
+      "id": "1139bd09-5137-43b2-a0cd-dfab626368ba",
+      "name": "Read People Sheet",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        672,
+        96
+      ],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "Q47OLEik2IvuIpHY",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const rows = $input.all().filter(i => i.json && Object.keys(i.json).length > 0);\nconst rec = $('Build Record').item.json;\nconst target = String(rec.full_name || '').trim().toLowerCase();\nconst match = rows.find(r => String(r.json.full_name || '').trim().toLowerCase() === target);\nconst maxId = rows.reduce((m, r) => {\n  const n = parseInt(r.json.person_id, 10);\n  return Number.isFinite(n) && n > m ? n : m;\n}, 0);\nreturn [{\n  json: {\n    person_id: match ? match.json.person_id : maxId + 1,\n    full_name: rec.full_name,\n    email: rec.email,\n    phone: rec.phone,\n    city: rec.city,\n    skills: rec.skills,\n    skill_category: rec.skill_category,\n    tagged_at: rec.tagged_at,\n    matched: !!match,\n    row_number: match ? match.json.row_number : null,\n  },\n}];"
+      },
+      "id": "5c3b555f-c54d-4677-b63b-5ebb2b735cbf",
+      "name": "Find Match",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        896,
+        96
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "matched",
+              "leftValue": "={{ $json.matched }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "043aed67-1b5f-445f-98ca-e17c2e07298d",
+      "name": "Match Found?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        1120,
+        96
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "documentId": {
+          "__rl": true,
+          "value": "1MIByLPOEx2_f1qh_vHx9oT0Qy48H9MUb4Kdwhd97PeI",
+          "mode": "list",
+          "cachedResultName": "persons",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1MIByLPOEx2_f1qh_vHx9oT0Qy48H9MUb4Kdwhd97PeI/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Sheet1",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1MIByLPOEx2_f1qh_vHx9oT0Qy48H9MUb4Kdwhd97PeI/edit#gid=0"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "matchingColumns": [
+            "row_number"
+          ],
+          "value": {
+            "row_number": "={{ $json.row_number }}",
+            "skill_category": "={{ $json.skill_category }}",
+            "tagged_at": "={{ $json.tagged_at }}"
+          },
+          "schema": [
+            {
+              "id": "row_number",
+              "displayName": "row_number",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "skill_category",
+              "displayName": "skill_category",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": false
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "91e82e67-3fd8-4d19-b3f3-d646fe505f61",
+      "name": "Update Person Row",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        1344,
+        0
+      ],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "Q47OLEik2IvuIpHY",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "completion",
+        "completionTitle": "Skills tagged",
+        "completionMessage": "=Tagged as: {{ $json.skill_category }}",
+        "options": {}
+      },
+      "id": "a41a336e-36f8-4dc3-b5c7-70128c06fe4e",
+      "name": "Show Result",
+      "type": "n8n-nodes-base.form",
+      "typeVersion": 2.5,
+      "position": [
+        1568,
+        96
+      ],
+      "webhookId": "9c337b8a-97c2-4934-873c-3ce7f4571ac2"
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "1MIByLPOEx2_f1qh_vHx9oT0Qy48H9MUb4Kdwhd97PeI",
+          "mode": "list",
+          "cachedResultName": "persons",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1MIByLPOEx2_f1qh_vHx9oT0Qy48H9MUb4Kdwhd97PeI/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Sheet1",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1MIByLPOEx2_f1qh_vHx9oT0Qy48H9MUb4Kdwhd97PeI/edit#gid=0"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "person_id": "={{ $json.person_id }}",
+            "full_name": "={{ $json.full_name }}",
+            "email": "={{ $json.email }}",
+            "phone": "={{ $json.phone }}",
+            "city": "={{ $json.city }}",
+            "skills": "={{ $json.skills }}",
+            "skill_category": "={{ $json.skill_category }}",
+            "tagged_at": "={{ $json.tagged_at }}"
+          },
+          "schema": [
+            {
+              "id": "person_id",
+              "displayName": "person_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "full_name",
+              "displayName": "full_name",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "email",
+              "displayName": "email",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "phone",
+              "displayName": "phone",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "city",
+              "displayName": "city",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "skills",
+              "displayName": "skills",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "skill_category",
+              "displayName": "skill_category",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": false
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "1cb097e2-bba7-4c51-8f7a-06030b26893c",
+      "name": "Add New Person Row",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        1344,
+        192
+      ],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "Q47OLEik2IvuIpHY",
+          "name": "Google Sheets account"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Skill Category Tagger": {
+      "main": [
+        [
+          {
+            "node": "Classify Skills",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Classify Skills": {
+      "main": [
+        [
+          {
+            "node": "Build Record",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Show Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Record": {
+      "main": [
+        [
+          {
+            "node": "Read People Sheet",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Read People Sheet": {
+      "main": [
+        [
+          {
+            "node": "Find Match",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Find Match": {
+      "main": [
+        [
+          {
+            "node": "Match Found?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Match Found?": {
+      "main": [
+        [
+          {
+            "node": "Update Person Row",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Add New Person Row",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Update Person Row": {
+      "main": [
+        [
+          {
+            "node": "Show Result",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Add New Person Row": {
+      "main": [
+        [
+          {
+            "node": "Show Result",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "errorWorkflow": "4hdl6MBiX1rHA4ml"
+  },
+  "versionId": "28845250-431a-434a-862a-bb665399fe62",
+  "meta": {
+    "instanceId": "adfd3ea128aa261889a755aee5b7673661d0ca7ea591b7d7043cd6545dc01f01"
+  },
+  "nodeGroups": [],
+  "id": "sV0G8zTCEf3xl7TJ",
+  "tags": []
+}
