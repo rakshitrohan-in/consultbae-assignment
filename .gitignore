@@ -12,6 +12,9 @@ ENV/
 # Audio submission uploads (user-generated test/runtime files)
 audioapp/uploads/
 
+# SQLite database (generated/local data, changes as the app is used)
+pipeline/consultbae.db
+
 # Editor/OS cruft
 .DS_Store
 Thumbs.db
