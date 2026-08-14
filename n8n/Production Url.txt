@@ -1,1 +1,9 @@
-https://raatse.app.n8n.cloud/form/c303e5b7-6d75-4e92-87f9-f5cf4fc2c194
+Production link- https://raatse.app.n8n.cloud/form/c303e5b7-6d75-4e92-87f9-f5cf4fc2c194
+
+
+Google Sheet Link- https://docs.google.com/spreadsheets/d/1MIByLPOEx2_f1qh_vHx9oT0Qy48H9MUb4Kdwhd97PeI/edit?usp=sharing
+
+
+Submit a name + skills through the form, it classifies the skills using an LLM 
+and updates the matching person's row in the sheet, or adds a new row if the 
+name isn't found.
